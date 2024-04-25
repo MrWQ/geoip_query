@@ -6,13 +6,20 @@
 # @Python: 3.7.5
 import geoip2.database
 import xlwt
+import requests
+requests.packages.urllib3.disable_warnings()
+request_session = requests.session()
+head = {"X-Forwarded-For":"127.0.0.1","Referer":"https://ip.sb/",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0"}
+
+request_session.headers.update(head)
 
 """
 https://www.maxmind.com/en/accounts/399866/geoip/downloads   下载最新GeoLite2数据
 20240223
 """
-city_reader = geoip2.database.Reader(r'C:\Users\10615\Downloads\20240223/GeoLite2-City.mmdb')
-asn_reader = geoip2.database.Reader(r'C:\Users\10615\Downloads\20240223/GeoLite2-ASN.mmdb')
+city_reader = geoip2.database.Reader("../geoip/GeoLite2-City.mmdb")
+asn_reader = geoip2.database.Reader("../geoip/GeoLite2-ASN.mmdb")
 
 
 def query_ip(ip):
@@ -57,6 +64,23 @@ def query_ip(ip):
     # 经纬度
     result['location'] = [city_ipinfo.location.longitude, city_ipinfo.location.latitude]
 
+    # 获取运营商/ISP
+    # https://api.ip.sb/geoip/1.1.8.21
+    u = f"https://api.ip.sb/geoip/{ip}"
+    isp_en = None
+    try:
+        resp = request_session.get(u, verify=False)
+        ips_json = resp.json()
+        isp_en = ips_json["isp"]
+        # 更新省份和城市
+        if "city" and "region" in ips_json.keys():
+            result["city"] = ips_json["city"]
+            result["subdivisions"] = ips_json["region"]
+    except Exception as e:
+        print(e)
+        isp_en = "Error"
+    result["isp_en"] = isp_en
+
     # print(result)
     return result
 
@@ -80,6 +104,7 @@ if __name__ == '__main__':
     mySheet.write(0, 11, "city")
     mySheet.write(0, 12, "city_zh")
     mySheet.write(0, 13, "location")
+    mySheet.write(0, 14, "ISP")
 
     # 循环写入数据
     line_num = 0
@@ -110,6 +135,7 @@ if __name__ == '__main__':
             mySheet.write(line_num, 11, result["city"])
             mySheet.write(line_num, 12, result["city_zh"])
             mySheet.write(line_num, 13, str(result["location"]))
+            mySheet.write(line_num, 13, result["isp_en"])
         except:
             pass
 
