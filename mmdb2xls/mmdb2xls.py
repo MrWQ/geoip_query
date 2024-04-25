@@ -135,7 +135,7 @@ if __name__ == '__main__':
             mySheet.write(line_num, 11, result["city"])
             mySheet.write(line_num, 12, result["city_zh"])
             mySheet.write(line_num, 13, str(result["location"]))
-            mySheet.write(line_num, 13, result["isp_en"])
+            mySheet.write(line_num, 14, result["isp_en"])
         except:
             pass
 
